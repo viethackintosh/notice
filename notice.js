@@ -1,8 +1,9 @@
-import { buildTag } from '../helpers/buildtag.js';
+import buildTag from '../helpers/buildtag.js';
 /**
  * notice hiển thị thông báo bằng pop push 
  */
-
+//<div id="tsp-notice" class="noticer"></div>
+const NOTICE_HTML =`<div class="noticer__icon"><span class="dashicons"></span></div><div class="noticer__message"><p class="message"></p></div><div class="noticer__button"><span class="dashicons dashicons-no-alt close"></span></div>`;
  const Notice = function() {
      let nt = this;
      nt.noticer;
@@ -12,70 +13,71 @@ import { buildTag } from '../helpers/buildtag.js';
       *  id
       * } 
       */
-     nt.init = ({ id }) => {
-        nt.noticer = document.querySelector(`#${id}`);
-         if (! nt.noticer) { 
-            nt.noticer = nt.addNoticer(id);
-            document.body.append(nt.noticer.notice); 
-            let closeBtn = nt.noticer.noticeButton.querySelector('.close');
-            closeBtn.onclick = event => nt.closeEvent(event);
+     nt.init = ({ id, config }) => {
+        if (! id ) return;
+        let noticer = document.querySelector(`#${id}`);
+        if (! noticer) {             
+            noticer = nt.addNoticer({id,config});
+            document.body.append(noticer.notice);             
+        } else {
+            if (! nt.noticer) noticer = nt.collectNotice({notice: noticer, config});
         }
+        if (! nt.noticer) nt.noticer = noticer;
         return nt;
-     }
- 
-     nt.addNoticer = id => {
-        let myNotice = document.createElement('div');
-        myNotice.id = id;
-        myNotice.className = 'noticer'; 
-        let noticeIcon = buildTag({
-            tag:'div',
-            className:'noticer__icon',
-            innerHTML: `<span class=dashicons></span>`
+    }
+    
+    nt.addNoticer = ({id,config}) => {
+        const notice = buildTag({
+            tag: 'div',
+            id,
+            className:'noticer',
+            innerHTML: NOTICE_HTML,
         });
-        let noticeMessage = buildTag({
-            tag:'div',
-            className:'noticer__message',
-            innerHTML:`<p class=message></p>`
-        });
-
-        let noticeButton = buildTag({
-            tag:'div',
-            className:'noticer__button',
-            innerHTML: `<span class='dashicons dashicons-no-alt close'></span>`                
-        })
-        myNotice.append(noticeIcon,noticeMessage,noticeButton);
-        return {
-            notice: myNotice,
-            noticeIcon, 
-            noticeMessage:noticeMessage.querySelector('.message'),
-            noticeButton,
+        
+        const collect = nt.collectNotice({notice, config});
+        return collect;
+    }
+    
+    nt.collectNotice = ({notice, config}) => {
+        const collect = {
+            notice,
+            noticeIcon: notice.querySelector('.noticer__icon'),
+            message:notice.querySelector('.message'),
+            noticeButton: notice.querySelector('.close'),
         }
+        collect.noticeButton.onclick = event => nt.closeEvent(event);
+        if (config) Object.entries(config).forEach(([method, paramater])=> nt[method]({notice: collect, paramater }));   
+        return collect;
+    }
+
+    nt.message = ({notice,paramater }) => notice.message.innerHTML = paramater;
+    nt.button = ({notice, paramater}) => { if (paramater === false) notice.noticeButton.classList.add('hide');}
+    nt.style = ({notice, paramater}) => {
+        if (paramater) notice.notice.classList.add(`--${paramater}`);
+        else notice.notice.classList.add('--info');
      }
- 
-     nt.open = ({        
-         message, // nội dung của thông báo
-         button,  // cho phép có nút close
-         style, // biểu tượng của notice (!: thông tin; tam giác: nguy hiểm;)
-         timer,
-     }) => {       
-         if (message) nt.noticer.noticeMessage.innerHTML = message;        
-         if (! button || button === false) nt.noticer.noticeButton.classList.add('hide');
-         if (! style ) nt.noticer.notice.classList.add('--info','open');
-         else nt.noticer.notice.classList.add(`--${style}`, 'open');
-         if (timer ) {
-             setTimeout(() => {
-                nt.close(); 
-             }, timer);
-         }
-     } 
+
+    nt.timer = ({notice, paramater}) => setTimeout(()=>{
+        nt.close()
+    }, paramater);
+
+    nt.icon = ({notice, paramater}) => {
+        if (paramater === false) notice.noticeIcon.classList.add('hide');
+    }
+
+    nt.open = ({ config }) => {          
+        if (config) Object.entries(config).forEach(([method, paramater])=> nt[method]({notice: nt.noticer, paramater }));   
+        nt.noticer.notice.classList.add('open');
+      
+    } 
  
      nt.closeEvent = event => {
-         nt.close(); 
+        nt.close(); 
      }
      nt.close = () => {        
-         nt.noticer.notice.classList.remove('open');
+        nt.noticer.notice.classList.remove('open');
      }
      return nt;
  }
 
-export { Notice };
+export default Notice;
